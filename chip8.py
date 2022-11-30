@@ -144,7 +144,7 @@ def loadRom(path):
 
 def emulationCycle():
     global memory, pc, fontset, screenPixels, sp, index, delay_timer
-    global sound_timer, keymap, registerV
+    global sound_timer, keymap, registerV, stack
     for i in range(80):
         memory[0x50 + i] = fontset[i]
     screen = pygame.display.set_mode((64 * 15, 32 * 15))
@@ -224,9 +224,7 @@ def emulationCycle():
             OPCODE: 0x7xnn
             FUNCTION: Add nn to Vx, then set Vx to the sum.
             """
-            registerV[(opcode & 0x0F00) >> 8] = (
-                registerV[(opcode & 0x0F00) >> 8] + opcode & 0x00FF
-            )
+            registerV[(opcode & 0x0F00) >> 8] += opcode & 0x00FF
         elif ((opcode & 0xF000) >> 12) == 0x8:
             if opcode & 0x000F == 0x0:
                 """
@@ -386,7 +384,7 @@ def emulationCycle():
                     print((opcode & 0x0F00) >> 8)
                     print(len(registerV))
                     print(len(keysPressed))
-                    print(registerV[(opcode & 0x0F00) >> 8] - 1)
+                    print(registerV[(opcode & 0x0F00) >> 8])
                     exit()
             else:
                 """
