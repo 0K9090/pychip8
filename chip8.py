@@ -378,7 +378,7 @@ def emulationCycle():
                 OPCODE: 0xEx9E
                 FUNCTION: Increment the program counter by 2 if the key with the value of Vx is pressed.
                 """
-                try:
+                try:  # Currently giving an index error when trying to run a certain rom.
                     if keysPressed[registerV[(opcode & 0x0F00) >> 8]] != 0:
                         pc += 2
                 except:
