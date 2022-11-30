@@ -224,7 +224,9 @@ def emulationCycle():
             OPCODE: 0x7xnn
             FUNCTION: Add nn to Vx, then set Vx to the sum.
             """
-            registerV[(opcode & 0x0F00) >> 8] += opcode & 0x00FF
+            registerV[(opcode & 0x0F00) >> 8] = (
+                registerV[(opcode & 0x0F00) >> 8] + opcode & 0x00FF
+            ) & 0xFF
         elif ((opcode & 0xF000) >> 12) == 0x8:
             if opcode & 0x000F == 0x0:
                 """
@@ -287,7 +289,7 @@ def emulationCycle():
                 registerV[(opcode & 0x0F00) >> 8] = (
                     registerV[(opcode & 0x0F00) >> 8]
                     - registerV[(opcode & 0x00F0) >> 4]
-                )
+                ) & 0xFF
             elif opcode & 0x000F == 0x6:
                 """
                 OPCODE: 0x8xy6
@@ -310,7 +312,7 @@ def emulationCycle():
                 registerV[(opcode & 0x0F00) >> 8] = (
                     registerV[(opcode & 0x00F0) >> 4]
                     - registerV[(opcode & 0x0F00) >> 8]
-                )
+                ) & 0xFF
             elif opcode & 0x000F == 0xE:
                 """
                 OPCODE: 0x8xyE
@@ -319,7 +321,9 @@ def emulationCycle():
                 registerV[0xF] = (
                     registerV[(opcode & 0x0F00) >> 8] & 0x80
                 ) >> 7
-                registerV[(opcode & 0x0F00) >> 8] <<= 1
+                registerV[(opcode & 0x0F00) >> 8] = (
+                    registerV[(opcode & 0x0F00) >> 8] << 1
+                ) & 0x0FF
         elif ((opcode & 0xF000) >> 12) == 0x9:
             """
             OPCODE: 0x9xy0
@@ -347,7 +351,7 @@ def emulationCycle():
             FUNCTION: The interpreter generates a random number from 0 to 255, which is then ANDed with the value nn. The results are stored in Vx.
             """
             randByte = random.randint(0, 255)
-            registerV[(opcode & 0x0F00) >> 8] = randByte + (opcode & 0x00FF)
+            registerV[(opcode & 0x0F00) >> 8] = randByte & (opcode & 0x00FF)
         elif ((opcode & 0xF000) >> 12) == 0xD:
             """
             OPCODE: 0xDxyn
@@ -421,14 +425,14 @@ def emulationCycle():
                     OPCODE: 0xFx55
                     FUNCTION: Store registers V0 through Vx in memory starting at location index.
                     """
-                    for i in range((opcode & 0x0F00) >> 8):
+                    for i in range(0, ((opcode & 0x0F00) >> 8) + 1, 1):
                         memory[index + i] = registerV[i]
                 else:
                     """
                     OPCODE: 0xFx65
                     FUNCTION: Read registers V0 through Vx from memory starting at location index.
                     """
-                    for i in range((opcode & 0x0F00) >> 8):
+                    for i in range(0, ((opcode & 0x0F00) >> 8) + 1, 1):
                         registerV[i] = memory[index + i]
             elif opcode & 0x000F == 0x8:
                 """
