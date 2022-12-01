@@ -12,6 +12,7 @@ import sys
 import threading
 import winsound
 from tkinter import filedialog as fd
+from time import sleep
 
 import pygame
 import pygame.freetype
@@ -20,7 +21,6 @@ pygame.init()
 
 rom = ""
 memory = [0x0] * 4096
-memory[0x1FF] = 3
 registerV = [0x0] * 16
 stack = [0x0] * 16
 pc = 0x200
@@ -289,8 +289,9 @@ def emulationCycle():
                 OPCODE: 0x8xy6
                 FUNCTION: If least significant bit of Vx is 1, then set  VF to 1. Else 0. Then divide Vx by 2.
                 """
-                registerV[0xF] = registerV[(opcode & 0x0F00) >> 8] & 0x1
+                VF = registerV[(opcode & 0x0F00) >> 8] & 0x1
                 registerV[(opcode & 0x0F00) >> 8] >>= 1
+                registerV[0xF] = VF
             elif opcode & 0x000F == 0x7:
                 """
                 OPCODE: 0x8xy7
@@ -312,10 +313,11 @@ def emulationCycle():
                 OPCODE: 0x8xyE
                 FUNCTION: If most significant bit of Vx is 1, then set  VF to 1. Else 0. Then multiply Vx by 2.
                 """
+                VF = (registerV[(opcode & 0x0F00) >> 8] & 0x80) >> 7
                 registerV[(opcode & 0x0F00) >> 8] = (
                     registerV[(opcode & 0x0F00) >> 8] << 1
                 ) & 0x0FF
-                registerV[0xF] = (registerV[(opcode & 0x0F00) >> 8] & 0x80) >> 7
+                registerV[0xF] = VF
         elif ((opcode & 0xF000) >> 12) == 0x9:
             """
             OPCODE: 0x9xy0
@@ -369,6 +371,7 @@ def emulationCycle():
                     if keysPressed[registerV[(opcode & 0x0F00) >> 8]] != 0:
                         pc += 2
                 except IndexError:
+                    sleep(2)
                     print(hex(opcode & 0xFFFF))
                     print((opcode & 0x0F00) >> 8)
                     print(len(registerV))
