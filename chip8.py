@@ -14,11 +14,13 @@ import winsound
 from tkinter import filedialog as fd
 
 import pygame
+import pygame.freetype
 
 pygame.init()
 
 rom = ""
 memory = [0x0] * 4096
+memory[0x1FF] = 3
 registerV = [0x0] * 16
 stack = [0x0] * 16
 pc = 0x200
@@ -147,7 +149,7 @@ def emulationCycle():
     global sound_timer, keymap, registerV, stack
     for i in range(80):
         memory[0x50 + i] = fontset[i]
-    screen = pygame.display.set_mode((64 * 15, 32 * 15))
+    screen = pygame.display.set_mode((64 * 10, 32 * 10))
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -233,33 +235,25 @@ def emulationCycle():
                 OPCODE: 0x8xy0
                 FUNCTION: Set Vx to Vy.
                 """
-                registerV[(opcode & 0x0F00) >> 8] = registerV[
-                    (opcode & 0x00F0) >> 4
-                ]
+                registerV[(opcode & 0x0F00) >> 8] = registerV[(opcode & 0x00F0) >> 4]
             elif opcode & 0x000F == 0x1:
                 """
                 OPCODE: 0x8xy1
                 FUNCTION: Perform bitwise OR operation on Vx and Vy, then set Vx to the output.
                 """
-                registerV[(opcode & 0x0F00) >> 8] |= registerV[
-                    (opcode & 0x00F0) >> 4
-                ]
+                registerV[(opcode & 0x0F00) >> 8] |= registerV[(opcode & 0x00F0) >> 4]
             elif opcode & 0x000F == 0x2:
                 """
                 OPCODE: 0x8xy2
                 FUNCTION: Perform a bitwise AND operation on Vx and Vy, then set Vx to the output.
                 """
-                registerV[(opcode & 0x0F00) >> 8] &= registerV[
-                    (opcode & 0x00F0) >> 4
-                ]
+                registerV[(opcode & 0x0F00) >> 8] &= registerV[(opcode & 0x00F0) >> 4]
             elif opcode & 0x000F == 0x3:
                 """
                 OPCODE: 0x8xy3
                 FUNCTION: Perform a bitwise XOR operation on Vx and Vy, then set Vx to the output.
                 """
-                registerV[(opcode & 0x0F00) >> 8] ^= registerV[
-                    (opcode & 0x00F0) >> 4
-                ]
+                registerV[(opcode & 0x0F00) >> 8] ^= registerV[(opcode & 0x00F0) >> 4]
             elif opcode & 0x000F == 0x4:
                 """
                 OPCODE: 0x8xy4
@@ -279,6 +273,10 @@ def emulationCycle():
                 OPCODE: 0x8xy5
                 FUNCTION: If Vx > Vy, then set VF to 1. Else 0. Then subtract Vy from Vx then set Vx to that.
                 """
+                registerV[(opcode & 0x0F00) >> 8] = (
+                    registerV[(opcode & 0x0F00) >> 8]
+                    - registerV[(opcode & 0x00F0) >> 4]
+                ) & 0xFF
                 if (
                     registerV[(opcode & 0x0F00) >> 8]
                     > registerV[(opcode & 0x00F0) >> 4]
@@ -286,10 +284,6 @@ def emulationCycle():
                     registerV[0xF] = 1
                 else:
                     registerV[0xF] = 0
-                registerV[(opcode & 0x0F00) >> 8] = (
-                    registerV[(opcode & 0x0F00) >> 8]
-                    - registerV[(opcode & 0x00F0) >> 4]
-                ) & 0xFF
             elif opcode & 0x000F == 0x6:
                 """
                 OPCODE: 0x8xy6
@@ -302,6 +296,10 @@ def emulationCycle():
                 OPCODE: 0x8xy7
                 FUNCTION: If Vy > Vx, then set VF to 1. Else 0. Then subtract Vx from Vy then set Vx to that.
                 """
+                registerV[(opcode & 0x0F00) >> 8] = (
+                    registerV[(opcode & 0x00F0) >> 4]
+                    - registerV[(opcode & 0x0F00) >> 8]
+                ) & 0xFF
                 if (
                     registerV[(opcode & 0x00F0) >> 4]
                     > registerV[(opcode & 0x0F00) >> 8]
@@ -309,21 +307,15 @@ def emulationCycle():
                     registerV[0xF] = 1
                 else:
                     registerV[0xF] = 0
-                registerV[(opcode & 0x0F00) >> 8] = (
-                    registerV[(opcode & 0x00F0) >> 4]
-                    - registerV[(opcode & 0x0F00) >> 8]
-                ) & 0xFF
             elif opcode & 0x000F == 0xE:
                 """
                 OPCODE: 0x8xyE
                 FUNCTION: If most significant bit of Vx is 1, then set  VF to 1. Else 0. Then multiply Vx by 2.
                 """
-                registerV[0xF] = (
-                    registerV[(opcode & 0x0F00) >> 8] & 0x80
-                ) >> 7
                 registerV[(opcode & 0x0F00) >> 8] = (
                     registerV[(opcode & 0x0F00) >> 8] << 1
                 ) & 0x0FF
+                registerV[0xF] = (registerV[(opcode & 0x0F00) >> 8] & 0x80) >> 7
         elif ((opcode & 0xF000) >> 12) == 0x9:
             """
             OPCODE: 0x9xy0
@@ -364,16 +356,9 @@ def emulationCycle():
                 sByte = memory[index + row]
                 for col in range(8):
                     if (sByte & (0x80 >> col)) != 0:
-                        if (
-                            screenPixels[
-                                (x + col + ((y + row) * 64)) % (64 * 32)
-                            ]
-                            == 1
-                        ):
+                        if screenPixels[(x + col + ((y + row) * 64)) % (64 * 32)] == 1:
                             registerV[0xF] = 1
-                        screenPixels[
-                            (x + col + ((y + row) * 64)) % (64 * 32)
-                        ] ^= 1
+                        screenPixels[(x + col + ((y + row) * 64)) % (64 * 32)] ^= 1
         elif ((opcode & 0xF000) >> 12) == 0xE:
             if opcode & 0x000F == 0xE:
                 """
@@ -383,7 +368,7 @@ def emulationCycle():
                 try:  # Currently giving an index error when trying to run a certain rom.
                     if keysPressed[registerV[(opcode & 0x0F00) >> 8]] != 0:
                         pc += 2
-                except:
+                except IndexError:
                     print(hex(opcode & 0xFFFF))
                     print((opcode & 0x0F00) >> 8)
                     print(len(registerV))
@@ -472,7 +457,7 @@ def emulationCycle():
                     pygame.draw.rect(
                         screen,
                         (255, 255, 255),
-                        pygame.Rect((x * 15, y * 15), (15, 15)),
+                        pygame.Rect((x * 10, y * 10), (10, 10)),
                     )
         pygame.display.flip()
         if delay_timer > 0:
@@ -505,10 +490,33 @@ beepfunc = Beeping(beeps)
 beepfunc.start()
 
 
+class DebugTerminal(threading.Thread):
+    def __init__(self, debugTerm):
+        threading.Thread.__init__(self)
+        self.runnable = debugTerm
+        self.daemon = True
+
+    def run(self):
+        self.runnable()
+
+
+def debugTerm():
+    global registerV
+    print("\033[8;40;80t")
+    print("Starting debugging process.")
+    print("\n" * 17)
+    while True:
+        print("\033[17A")
+        for i in range(16):
+            print("V" + hex(i)[-1].upper() + ": " + str(registerV[i]))
+debugF = DebugTerminal(debugTerm)
+
+
 loadRom(
     fd.askopenfilename(
         title="Select A Chip8 Rom",
         filetypes=(("Chip8 Roms", "*.ch8"), ("All Files", "*.*")),
     )
 )
+debugF.start()
 emulationCycle()
