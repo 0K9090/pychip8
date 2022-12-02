@@ -263,6 +263,7 @@ def emulationCycle():
                 """
                 ttr = "0x8xy1"
                 registerV[(opcode & 0x0F00) >> 8] |= registerV[(opcode & 0x00F0) >> 4]
+                registerV[0xF] = 0
             elif opcode & 0x000F == 0x2:
                 """
                 OPCODE: 0x8xy2
@@ -270,6 +271,7 @@ def emulationCycle():
                 """
                 ttr = "0x8xy2"
                 registerV[(opcode & 0x0F00) >> 8] &= registerV[(opcode & 0x00F0) >> 4]
+                registerV[0xF] = 0
             elif opcode & 0x000F == 0x3:
                 """
                 OPCODE: 0x8xy3
@@ -277,6 +279,7 @@ def emulationCycle():
                 """
                 ttr = "0x8xy3"
                 registerV[(opcode & 0x0F00) >> 8] ^= registerV[(opcode & 0x00F0) >> 4]
+                registerV[0xF] = 0
             elif opcode & 0x000F == 0x4:
                 """
                 OPCODE: 0x8xy4
@@ -368,8 +371,8 @@ def emulationCycle():
             OPCODE: 0xBnnn
             FUNCTION: Jump to location nnn + V0
             """
-            ttr = "0cBnnn"
-            pc = (opcode & 0x0FFF) + registerV[0]
+            ttr = "0xBnnn"
+            pc = (opcode & 0x0FFF) + registerV[(opcode & 0x0F00) >> 8]
         elif ((opcode & 0xF000) >> 12) == 0xC:
             """
             OPCODE: 0xCxnn
@@ -445,6 +448,7 @@ def emulationCycle():
                     ttr = "0xFx55"
                     for i in range(0, ((opcode & 0x0F00) >> 8) + 1, 1):
                         memory[index + i] = registerV[i]
+                    index += 1
                 else:
                     """
                     OPCODE: 0xFx65
@@ -453,6 +457,7 @@ def emulationCycle():
                     ttr = "0xFx65"
                     for i in range(0, ((opcode & 0x0F00) >> 8) + 1, 1):
                         registerV[i] = memory[index + i]
+                    index += 1
             elif opcode & 0x000F == 0x8:
                 """
                 OPCODE: 0xFx18
